@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whiteboard - Room</title>
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="whiteboard-container">
+            <div class="toolbar">
+                <div class="tool-group">
+                    <input type="color" id="colorPicker" class="form-control form-control-color" value="#000000">
+                    <input type="range" id="brushSize" min="1" max="20" value="2" class="form-range">
+                </div>
+                <div class="tool-group">
+                    <button class="btn btn-secondary" onclick="whiteboard.undo()">Undo</button>
+                    <button class="btn btn-secondary" onclick="whiteboard.redo()">Redo</button>
+                </div>
+                <div class="tool-group">
+                    <button class="btn btn-secondary active" onclick="whiteboard.setMode('draw')">Draw</button>
+                    <button class="btn btn-secondary" onclick="whiteboard.setMode('rect')">Rectangle</button>
+                    <button class="btn btn-secondary" onclick="whiteboard.setMode('circle')">Circle</button>
+                </div>
+                <div class="tool-group">
+                    <button class="btn btn-danger" onclick="whiteboard.clear()">Clear</button>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#shareModal">Share Room</button>
+                </div>
+                <div class="user-presence">
+                    <span id="activeUsers">Users: 1</span>
+                </div>
+            </div>
+            <canvas id="whiteboard"></canvas>
+        </div>
+    </div>
+    <!-- Username Modal -->
+    <div class="modal fade" id="userNameModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Enter Your Name</h5>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="userName" class="form-control" placeholder="Your name">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="setUserName()">Join Whiteboard</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Share Modal -->
+    <div class="modal fade" id="shareModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Share Whiteboard</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group">
+                        <input type="text" id="shareUrl" class="form-control" readonly>
+                        <button class="btn btn-outline-primary" onclick="copyShareLink()">
+                            Copy Link
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/socket.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/whiteboard.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Show username modal
+            const userNameModal = new bootstrap.Modal(document.getElementById('userNameModal'));
+            userNameModal.show();
+
+            window.setUserName = () => {
+                const userName = document.getElementById('userName').value.trim();
+                if (userName) {
+                    try {
+                        const socketManager = new SocketManager();
+                        socketManager.setUserName(userName);
+                        window.whiteboard = new Whiteboard('whiteboard', socketManager, '{{ room_id }}');
+                        
+                        // Setup event handlers
+                        document.getElementById('colorPicker').addEventListener('change', (e) => {
+                            whiteboard.setColor(e.target.value);
+                        });
+
+                        document.getElementById('brushSize').addEventListener('input', (e) => {
+                            whiteboard.setBrushSize(parseInt(e.target.value));
+                        });
+                        
+                        userNameModal.hide();
+                    } catch (error) {
+                        console.error('Error initializing whiteboard:', error);
+                        alert('Failed to initialize whiteboard. Please try refreshing the page.');
+                    }
+                }
+            };
+        });
+
+        function copyShareLink() {
+            const shareUrl = document.getElementById('shareUrl');
+            shareUrl.value = window.location.href;
+            shareUrl.select();
+            document.execCommand('copy');
+            
+            // Show feedback
+            const copyBtn = document.querySelector('#shareModal .btn-outline-primary');
+            const originalText = copyBtn.textContent;
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => copyBtn.textContent = originalText, 2000);
+        }
+
+        // Set share URL when modal opens
+        document.getElementById('shareModal').addEventListener('shown.bs.modal', function () {
+            document.getElementById('shareUrl').value = window.location.href;
+        });
+    </script>
+</body>
+</html>

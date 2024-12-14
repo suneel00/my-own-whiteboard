@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wb-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: wb
+  template:
+    metadata:
+      labels:
+        app: wb
+    spec:
+      containers:
+      - name: wb
+        image: rohitghumare64/wb:new
+        command: ["--config=./config.default.yml"]
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+      
+
+---
+
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: wb-service
+spec:
+  selector:
+    app: wb
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+  type: LoadBalancer
